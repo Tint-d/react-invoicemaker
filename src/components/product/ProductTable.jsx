@@ -26,6 +26,9 @@ import ProductEditModal from "./ProductEditModal";
 import { Modal } from "@mantine/core";
 import { BsExclamationTriangleFill } from "react-icons/bs";
 import { useDisclosure } from "@mantine/hooks";
+import * as FileSaver from "file-saver";
+import * as XLSX from "xlsx";
+import { AiFillFileExcel } from "react-icons/ai";
 
 const emptySearchForm = {
   name: "",
@@ -41,8 +44,9 @@ const ProductTable = ({ showAdvanceSearch = false }) => {
   const [currentItems, setCurrentItems] = useState(null);
   const [searchForm, setSearchForm] = useState(emptySearchForm);
   const [opened, { open, close }] = useDisclosure(false);
+
   const product = useMemo(() => {
-    let filterData = allProducts.length > 0 ? [...allProducts].reverse() : [];
+    let filterData = allProducts.length > 0 ? [...allProducts].sort() : [];
     if (searchForm.name?.trim()) {
       filterData = allProducts.filter((product) =>
         product.name.includes(searchForm.name)
@@ -88,8 +92,38 @@ const ProductTable = ({ showAdvanceSearch = false }) => {
     dispatch(setDeleteId(id));
   };
 
+  const fileType =
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
+  const fileExtension = ".xlsx";
+
+  const apiData = product?.map((product) => ({
+    ProductID: product.productID || "#",
+    Name: product.name,
+    Price: product.price,
+    Amount: product.amount,
+  }));
+
+  const exportToCSV = () => {
+    const ws = XLSX.utils.json_to_sheet(apiData);
+    const wb = { Sheets: { data: ws }, SheetNames: ["data"] };
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const data = new Blob([excelBuffer], { type: fileType });
+    FileSaver.saveAs(data, "excel" + fileExtension);
+  };
+
   return (
     <>
+      <div className="flex items-center gap-3 mb-3">
+        <h1 className=" text-2xl text-gray-900 font-medium tracking-wide mb-3">
+          Products
+        </h1>
+        <Button block={1} size="sm" onClick={exportToCSV}>
+          <div className=" flex items-center gap-2">
+            <AiFillFileExcel className=" text-xl" />
+            <span>Download Excel</span>
+          </div>
+        </Button>
+      </div>
       {showAdvanceSearch === true && (
         <div className="bg-white rounded-xl px-3 py-3 mb-3">
           <div className="font-title mb-2">Advanced Search</div>

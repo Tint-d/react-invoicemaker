@@ -21,7 +21,6 @@ const emptyForm = {
 const QuickEditCompany = () => {
   const [companyForm, setCompanyForm] = useState(emptyForm);
   const company = useSelector(state => state.Dashboard.company)
-  console.log(company);
   const dispatch = useDispatch();
 
   const onChangeImage = useCallback((str) => {

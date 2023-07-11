@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AiFillFileImage } from "react-icons/ai";
 import ImageUploader from "../common/ImageUploader";
 import { useDispatch, useSelector } from "react-redux";
@@ -8,6 +14,7 @@ import {
   updateNewProductFormField,
 } from "../../redux/productSlice";
 import {
+  defaultInputInvalidStyle,
   defaultInputLargeInvalidStyle,
   defaultInputLargeStyle,
   defaultInputStyle,
@@ -15,6 +22,8 @@ import {
 import Button from "../Button/Button";
 import { nanoid } from "@reduxjs/toolkit";
 import ProductEditModal from "./ProductEditModal";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const emptyForm = {
   id: "",
@@ -27,6 +36,13 @@ const emptyForm = {
 
 const QuickAddProductForm = () => {
   const [productForm, setProductForm] = useState(emptyForm);
+  const [isTouched, setIsTouched] = useState(false);
+  const [validForm, setValidForm] = useState(
+    Object.keys(emptyForm).reduce((a, b) => {
+      return { ...a, [b]: false };
+    }, {})
+  );
+  const productNewForm = useSelector((state) => state.Product.newForm);
   const dispatch = useDispatch();
 
   const onChangeImage = useCallback((str) => {
@@ -63,10 +79,45 @@ const QuickAddProductForm = () => {
     return defaultStyle;
   }, [productForm]);
 
-  const submitHandler = () =>{
-    dispatch(addNewProduct({ ...productForm, id: nanoid() }));
-  }
+  const submitHandler = useCallback(() => {
+    setIsTouched(true);
 
+    const isValid = Object.keys(validForm).every((key) => validForm[key]);
+
+    if (!isValid) {
+      toast.error("Invalid Client Form !", {
+        position: toast.POSITION.BOTTOM_CENTER,
+        autoClose: 2000,
+      });
+      return;
+    }
+
+    toast.success("Wow so easy to Update!", {
+      position: "bottom-center",
+      autoClose: 2000,
+    });
+
+    dispatch(addNewProduct({ ...productForm, id: nanoid() }));
+    setIsTouched(false);
+    console.log("submit");
+  }, [productForm, dispatch, validForm]);
+
+  useEffect(() => {
+    setValidForm((prev) => ({
+      id: true,
+      image: true,
+      name: productForm?.name?.trim() ? true : false,
+      productID: productForm?.productID?.trim() ? true : false,
+      price: productForm?.price <= 0 ? false : true,
+      amount: productForm.amount <= 0 ? false : true,
+    }));
+  }, [productForm]);
+
+  useEffect(() => {
+    if (productNewForm) {
+      setProductForm(productNewForm);
+    }
+  }, [productNewForm]);
 
   return (
     <div className="bg-white rounded-xl p-4">
@@ -83,11 +134,14 @@ const QuickAddProductForm = () => {
           <div>
             <input
               autoComplete="nope"
-              value={productForm.productID}
               placeholder="Product ID"
-              className={defaultInputLargeStyle}
+              className={
+                !validForm.productID && isTouched
+                  ? defaultInputLargeInvalidStyle
+                  : defaultInputLargeStyle
+              }
+              value={productForm.productID}
               onChange={(e) => handlerProductValue(e, "productID")}
-              // disabled={isInitLoading}
             />
           </div>
         </div>
@@ -102,8 +156,11 @@ const QuickAddProductForm = () => {
               autoComplete="nope"
               placeholder="Product Name"
               type="text"
-              className={defaultInputStyle}
-              // disabled={isInitLoading}
+              className={
+                !validForm.name && isTouched
+                  ? defaultInputInvalidStyle
+                  : defaultInputStyle
+              }
               value={productForm.name}
               onChange={(e) => handlerProductValue(e, "name")}
             />
@@ -120,8 +177,11 @@ const QuickAddProductForm = () => {
               autoComplete="nope"
               placeholder="Product Price"
               type="text"
-              className={defaultInputStyle}
-              // disabled={isInitLoading}
+              className={
+                !validForm.price && isTouched
+                  ? defaultInputInvalidStyle
+                  : defaultInputStyle
+              }
               value={productForm.price}
               onChange={(e) => handlerProductValue(e, "price")}
             />
@@ -138,7 +198,11 @@ const QuickAddProductForm = () => {
               autoComplete="nope"
               placeholder="Amount"
               type="number"
-              className={defaultInputStyle}
+              className={
+                !validForm.amount && isTouched
+                  ? defaultInputInvalidStyle
+                  : defaultInputStyle
+              }
               // disabled={isInitLoading}
               value={productForm.amount}
               onChange={(e) => handlerProductValue(e, "amount")}
@@ -152,6 +216,7 @@ const QuickAddProductForm = () => {
         </Button>
       </div>
       {/* <ProductEditModal/> */}
+      <ToastContainer />
     </div>
   );
 };

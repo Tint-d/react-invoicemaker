@@ -20,6 +20,10 @@ import ReactPaginate from "react-paginate";
 import ClientModal from "./ClientModal";
 import { Modal } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import * as FileSaver from "file-saver";
+import * as XLSX from "xlsx";
+import Button from "../Button/Button";
+import { AiFillFileExcel } from "react-icons/ai";
 
 const emptySearchForm = {
   name: "",
@@ -61,7 +65,7 @@ const ClientTable = ({ advance }) => {
     return filterData;
   }, [searchForm, allClient]);
 
-  // console.log(product);
+  console.log(product);
   const handlePageClick = (event) => {
     const newOffset = (event.selected * itemsPerPage) % product.length;
 
@@ -92,9 +96,60 @@ const ClientTable = ({ advance }) => {
     close();
   };
 
+  const fileType =
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8";
+  const fileExtension = ".xlsx";
+
+  const apiData = product?.map((client) => ({
+    Name: client.name,
+    Email: client.email,
+    Phone: client.mobile,
+    Address: client.billing,
+  }));
+
+  const exportToCSV = () => {
+    const ws = XLSX.utils.json_to_sheet(apiData);
+
+
+    const wb = { Sheets: { data: ws }, SheetNames: ["data"] };
+    ws["!cols"] = [
+      { wch: 20 }, // Name column width
+      { wch: 30 }, // Email column width
+      { wch: 20 }, // Phone column width
+      { wch: 20 }, // Address1 column width
+      { wch: 20 }, // Address2 column width
+    ];
+    ws["!rows"] = [
+      { hpt: 20 }, // Row height
+      { hpt: 20 }, // Row height
+      { hpt: 20 }, // Row height
+      { hpt: 20 }, // Row height
+      { hpt: 20 }, // Row height
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+
+    const excelData = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const data = new Blob([excelBuffer], { type: fileType });
+    FileSaver.saveAs(data, "invoice" + fileExtension);
+    return excelData;
+  };
+
   return (
     <>
       {/* advance search */}
+      <div className="flex items-center gap-3 mb-3">
+        <h1 className=" text-2xl text-gray-900 font-medium tracking-wide mb-3">
+          Clients
+        </h1>
+        <Button block={1} size="sm" onClick={exportToCSV}>
+          <div className=" flex items-center gap-2">
+            <AiFillFileExcel className=" text-xl" />
+            <span>Download Excel</span>
+          </div>
+        </Button>
+      </div>
       {advance ? (
         ""
       ) : (
@@ -172,7 +227,7 @@ const ClientTable = ({ advance }) => {
             currentItems.map((product) => (
               <div className={defaultTdWrapperStyle} key={product.id}>
                 <div className={defaultTdStyle}>
-                  <div className={defaultTdContentTitleStyle}>ProductID</div>
+                  <div className={defaultTdContentTitleStyle}>Name</div>
                   <div className={defaultTdContent}>
                     {product.image ? (
                       <img
@@ -182,18 +237,17 @@ const ClientTable = ({ advance }) => {
                       />
                     ) : (
                       <span className="h-10 w-10 rounded-2xl bg-gray-100 flex justify-center items-center">
-                        <BiUserCircle className=" text-gray-500 text-2xl"/>
+                        <BiUserCircle className=" text-gray-500 text-2xl" />
                       </span>
                     )}
                     <span className="whitespace-nowrap text-ellipsis overflow-hidden pl-1">
-                      {/* {product.productID || "#"} */}
                       {product.name}
                     </span>
                   </div>
                 </div>
 
                 <div className={defaultTdStyle}>
-                  <div className={defaultTdContentTitleStyle}>Name</div>
+                  <div className={defaultTdContentTitleStyle}>Mobile</div>
                   <div className={defaultTdContent}>
                     <span className="whitespace-nowrap text- overflow-hidden">
                       {product.mobile}
@@ -203,7 +257,7 @@ const ClientTable = ({ advance }) => {
                 </div>
 
                 <div className={defaultTdStyle}>
-                  <div className={defaultTdContentTitleStyle}>Name</div>
+                  <div className={defaultTdContentTitleStyle}>Email</div>
                   <div className={defaultTdContent}>
                     <span className="whitespace-nowrap text-ellipsis overflow-hidden">
                       {product.email}
