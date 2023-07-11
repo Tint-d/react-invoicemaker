@@ -8,11 +8,15 @@ import InvoiceTable from "../components/invoices/InvoiceTable";
 import Button from "../components/Button/Button";
 
 const Invoices = () => {
+  const currentColor = useSelector((state) => state.Invoice.defaultColor);
   return (
     <>
       <Layout>
         <div className=" flex items-center gap-5 mb-3">
-          <h3 className=" px- text-2xl text-gray-900 tracking-wide font-semibold">
+          <h3
+          
+            className=" px- text-2xl text-gray-900 tracking-wide font-semibold"
+          >
             Invoices
           </h3>
           <Link className=" w-full" to={paths.Invoice_New}>

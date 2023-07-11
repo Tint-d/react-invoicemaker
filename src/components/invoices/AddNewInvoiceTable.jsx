@@ -17,6 +17,7 @@ import { AiFillDelete, AiFillPlusCircle } from "react-icons/ai";
 import { updateNewProductFormField } from "../../redux/productSlice";
 import InvoiceModal from "./InvoiceModal";
 import AddExistingProduct from "./AddExistingProduct";
+import { useDownloadRef } from "../../context/Context";
 
 const emptyForm = {
   name: "",
@@ -28,6 +29,7 @@ const AddNewInvoiceTable = () => {
   const [productForms, setProductForms] = useState(emptyForm);
   const invoiceProducts = useSelector((state) => state.Invoice.data);
   const taxPercentage = useSelector((state) => state.Invoice.tax);
+  const { isExporting } = useDownloadRef();
   const dispatch = useDispatch();
 
   const removeInput = (id) => {
@@ -73,9 +75,9 @@ const AddNewInvoiceTable = () => {
         <div className=" flex bg-white w-full">
           <input
             type="text"
-            value={productForm.name}
-            className={defaultInputSmStyle + " text-right"}
+            className={isExporting ? "text-left"  : defaultInputSmStyle + " text-right"}
             placeholder="Product Name"
+            value={productForm.name}
             onChange={(e) => handleInputChange(e, product.id, "name")}
           />
         </div>
@@ -83,37 +85,40 @@ const AddNewInvoiceTable = () => {
         <div className="w-full">
           <input
             type="number"
+            className={isExporting ? "text-right"  : defaultInputSmStyle + " text-right"}
             value={productForm.price}
             onChange={(e) => handleInputChange(e, product.id, "price")}
-            className={defaultInputSmStyle + " text-right"}
           />
         </div>
 
         <div className="w-full">
           <input
             type="number"
+            className={isExporting ? "text-right" : defaultInputSmStyle + " text-right"}
             value={productForm.amount}
             onChange={(e) => handleInputChange(e, product.id, "amount")}
-            className={defaultInputSmStyle + " text-right"}
           />
         </div>
 
         <div className=" w-full  flex justify-end">
-          <div
-            className="flex items-center justify-end gap-2 text-xl "
-            onClick={() => removeInput(product.id)}
-          >
+          <div className="flex items-center justify-end gap-2 text-xl ">
             <span className=" text-base">{product.price * product.amount}</span>
-            <button className="bg-red-200 p-2 w-8 h-8 flex items-center justify-center rounded-full">
-              <BsFillTrashFill className="text-red-500 text-xl" />
-            </button>
+            {isExporting ? (
+              ""
+            ) : (
+              <button
+                onClick={() => removeInput(product.id)}
+                className="bg-red-200 p-2 w-8 h-8 flex items-center justify-center rounded-full"
+              >
+                <BsFillTrashFill className="text-red-500 text-xl" />
+              </button>
+            )}
           </div>
         </div>
       </div>
     );
   });
 
- 
   return (
     <>
       {emptyTable}

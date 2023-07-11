@@ -7,12 +7,9 @@ const Products = () => {
   return (
     <div>
       <Layout>
-        <h1 className=" text-2xl text-gray-900 font-medium tracking-wide mb-3">
-          Products
-        </h1>
         <div className=" flex justify-between gap-5">
           <div className=" flex-1">
-            <ProductTable showAdvanceSearch />
+            <ProductTable showAdvanceSearch  />
           </div>
           <div>
             <QuickAddProductForm />

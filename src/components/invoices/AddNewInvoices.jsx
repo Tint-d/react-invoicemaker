@@ -2,27 +2,36 @@ import React, { useCallback, useRef } from "react";
 import Layout from "../../Layout";
 import { IoIosArrowBack } from "react-icons/io";
 import { TiEye } from "react-icons/ti";
-import { AiFillSetting, AiFillFilePdf } from "react-icons/ai";
+import { AiFillSetting, AiFillFilePdf, AiFillPrinter } from "react-icons/ai";
 import { TbDownload } from "react-icons/tb";
 import AddEmptyProduct from "./AddEmptyProduct";
 import InvoiceModal from "./InvoiceModal";
 import InvoiceButtons from "./InvoiceButtons";
 import { useDispatch, useSelector } from "react-redux";
 import { useState } from "react";
-import { setClientInfo, setClientInfoUpdate } from "../../redux/invoiceSlice";
+import {
+  setClientInfo,
+  setClientInfoUpdate,
+  setSettingModal,
+} from "../../redux/invoiceSlice";
 import { nanoid } from "@reduxjs/toolkit";
 import { HiUserPlus } from "react-icons/hi2";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { defaultInputSmStyle } from "../constants/defaultStyle";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { setClientModalToggle } from "../../redux/client";
 import ExistClientModal from "../client/ExistClientModal";
 import { BiUserCircle } from "react-icons/bi";
-import { toPng } from "dom-to-image";
 import domtoimage from "dom-to-image";
-import DownloadImage from "../common/DownloadImage";
 import { useDownloadRef } from "../../context/Context";
+import { setCurrentTab } from "../../redux/dashboard";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import InvoiceSettingModal from "./InvoiceSettingModal";
+import { useReactToPrint } from "react-to-print";
+import { paths } from "../../routes/path";
+import {motion} from "framer-motion"
 
 const clientEmptyForm = {
   id: "",
@@ -53,19 +62,21 @@ const AddNewInvoices = () => {
   const total = useSelector((state) => state.Invoice.total);
   const company = useSelector((state) => state.Dashboard.company);
   const existClients = useSelector((state) => state.Client.existingClient);
+  const settingToggle = useSelector((state) => state.Invoice.settingToggle);
+  const currentColor = useSelector((state) => state.Invoice.defaultColor);
   const downloadRef = useRef();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [isViewMode, setIsViewMode] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [download, setDownload] = useState(false);
+  const { isExporting, setIsExporting } = useDownloadRef();
+  const printRef = useRef(null);
+  const ref = useRef();
+  const [loading, setLoading] = useState(false);
 
   const handleDownloadImage = useCallback(() => {
-    // if (showNavbar) {
-    //   toggleNavbar();
-    // }
-    // setEscapeOverflow(true);
-    setIsViewMode(true);
+    if (setCurrentTab) {
+      dispatch(setCurrentTab(false));
+    }
     setIsExporting(true);
     domtoimage
       .toJpeg(downloadRef.current, { quality: 1 })
@@ -84,11 +95,10 @@ const AddNewInvoices = () => {
           console.log(e);
         } finally {
           setIsExporting(false);
-          setIsViewMode(false);
           // setEscapeOverflow(false);
         }
       });
-  }, []);
+  }, [isExporting, dispatch]);
 
   const selectClientModalID = useSelector(
     (state) => state.Client.selectModalID
@@ -145,36 +155,95 @@ const AddNewInvoices = () => {
 
   const companyName = company.slice(-1)[0];
 
-  // const handleDownloadImage = () => {
-  //   const targetEl = downloadRef.current;
-  //   domtoimage.toJpeg(targetEl, { quality: 1 }).then((dataUrl) => {
-  //     let link = document.createElement("a");
-  //     link.download = "invoice.jpeg";
-  //     link.href = dataUrl;
-  //     link.click();
-  //   });
-  // };
+  const generatePdf = useCallback(async () => {
+    if (setCurrentTab) {
+      dispatch(setCurrentTab(false));
+    }
+    setIsExporting(true);
+    setIsViewMode(true);
+    try {
+      const targetElement = ref.current;
+      const scale = 2;
+      const canvas = await html2canvas(targetElement, { scale });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF();
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save("invoice.pdf");
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [isExporting, dispatch]);
+
+  const settingToggleHandler = () => {
+    dispatch(setSettingModal(!settingToggle));
+  };
+
+  const reactToPrintContent = useCallback(() => {
+    return printRef.current;
+  }, []);
+
+  const handlePrint = useReactToPrint({
+    content: reactToPrintContent,
+    documentTitle: "Invoice Letter",
+
+    onBeforeGetContent: useCallback(() => {
+      setLoading(true);
+    }, []),
+    onAfterPrint: useCallback(() => {
+      setIsExporting(false);
+      setLoading(false);
+    }, []),
+    removeAfterPrint: true,
+  });
+
+  const handleExport = useCallback(() => {
+    setIsViewMode(true);
+    setIsExporting(true);
+    setTimeout(() => {
+      setLoading(true);
+      handlePrint();
+    }, 2000);
+  }, [handlePrint]);
+
+  if (loading) {
+    return (
+      <p className=" h-screen flex justify-center items-center">loading...</p>
+    );
+  }
 
   return (
     <Layout>
-      <div>
-        <h5 className="text-gray-900 font-semibold tracking-wide text-2xl">
+      <div className="">
+        <h5
+          style={{ color: currentColor }}
+          className="text-gray-900 font-semibold tracking-wide text-2xl"
+        >
           {" "}
           New Invoice
         </h5>
-        <div className=" flex justify-between gap-1 items-center bg-white p-5 rounded-xl my-3">
-          <button className=" w-7 h-7 flex items-center  justify-center bg-blue-500 rounded-lg">
-            <IoIosArrowBack className=" text-white text-base" />
-          </button>
+        <div className=" flex gap-1 items-center bg-white p-5 rounded-xl my-3">
+          <Link to={paths.Invoice}>
+            <button className=" w-7 h-7 flex items-center  justify-center bg-blue-500 rounded-lg">
+              <IoIosArrowBack className=" text-white text-base" />
+            </button>
+          </Link>
           <button
             className={
               defaultInputSmStyle + " flex justify-center items-center gap-2"
             }
+            onClick={handleExport}
           >
-            <TiEye className=" text-blue-600" />
-            <p className=" text-blue-600 font-medium align-middle">View Mode</p>
+            <AiFillPrinter className=" text-blue-600" />
+            <p className=" text-blue-600 font-medium align-middle">Print</p>
           </button>
           <button
+            onClick={settingToggleHandler}
             className={
               defaultInputSmStyle + " flex justify-center items-center gap-2"
             }
@@ -182,16 +251,20 @@ const AddNewInvoices = () => {
             <AiFillSetting className=" text-blue-600" />
             <p className=" text-blue-600 font-medium align-middle">Setting</p>
           </button>
-          <button
-            className={
-              defaultInputSmStyle + " flex justify-center items-center gap-2"
-            }
-          >
-            <AiFillFilePdf className=" text-blue-600" />
-            <p className=" text-blue-600 font-medium align-middle">
-              Export PDF
-            </p>
-          </button>{" "}
+          <div className=" flex-1  ">
+            <button
+              onClick={generatePdf}
+              className={
+                defaultInputSmStyle + " flex justify-center items-center gap-2"
+              }
+            >
+              <AiFillFilePdf className=" text-blue-600" />
+              <p className=" text-blue-600 font-medium align-middle">
+                {/* {loading ? "Export Pdf" : "loading"} */}
+                Export PDF
+              </p>
+            </button>
+          </div>
           <button
             onClick={handleDownloadImage}
             className={
@@ -207,143 +280,170 @@ const AddNewInvoices = () => {
 
         {/* DownloadImage */}
 
-        <div>
+        <div ref={downloadRef}>
           {/*  Company*/}
-          <div className="mb-3 bg-white p-5 w-full rounded-lg flex justify-between items-center ">
-            {company?.length > 0
-              ? companyName && (
-                  <div
-                    key={companyName.id}
-                    className="flex gap-2 items-center "
+          <div ref={ref}>
+            <div ref={printRef}>
+              <div
+                className={`
+                
+              ${
+                company?.length > 0
+                  ? "mb-3 bg- p-5 w-full rounded-lg flex justify-between items-center "
+                  : ""
+              }
+            `}
+              >
+                {company?.length > 0
+                  ? companyName && (
+                      <div
+                        key={companyName.id}
+                        className="flex gap-2 items-center "
+                      >
+                        {companyName.image ? (
+                          <img
+                            src={companyName?.image}
+                            className="object-cover h-20 w-20"
+                            alt=""
+                          />
+                        ) : (
+                          <span className="h-10 w-10 rounded-2xl bg--100 flex justify-center items-center">
+                            <BiUserCircle className="text-white text-2xl" />
+                          </span>
+                        )}
+                        <div>
+                          <p className=" mb-3 text-white font-semibold">
+                            {companyName?.name}
+                          </p>
+                          <p className=" text-white text-sm font-normal">
+                            {companyName?.address}
+                          </p>
+                          <p className=" text-white text-sm font-normal">
+                            {companyName?.mobile}
+                          </p>
+                          <p className=" text-white text-sm font-normal">
+                            {companyName?.email}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  : ""}
+
+                {company.length > 0 ? (
+                  <h2
+                    className={`text-white text-4xl font-semibold tracking-wide`}
                   >
-                    {companyName.image ? (
-                      <img
-                        src={companyName?.image}
-                        className="object-cover h-20 w-20"
-                        alt=""
-                      />
-                    ) : (
-                      <span className="h-10 w-10 rounded-2xl bg-gray-100 flex justify-center items-center">
-                        <BiUserCircle className="text-gray-500 text-2xl" />
-                      </span>
-                    )}
+                    Invoice
+                  </h2>
+                ) : (
+                  ""
+                )}
+              </div>
+              {/* <InvoiceClientInfo /> */}
+              <div className="bg-white p-3 rounded-xl ">
+                <div className=" flex items-center gap-3">
+                  {isExporting ? (
+                    ""
+                  ) : (
+                    <>
+                      <h3> Billing To</h3>
+                      <button
+                        onClick={existClient}
+                        className="rounded-xl px-7 text-indigo-500 py-1 border-2 border-solid border-indigo-300 h-8 text-sm flex justify-center items-center gap-2"
+                      >
+                        <HiUserPlus className="text-blue-600 text-xl" />
+                        Existing
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="flex justify-between md:flex-wrap">
+                  <div className="mt-2 w-52 flex flex-col gap-3">
                     <div>
-                      <p className=" mb-3 text-gray-700 font-semibold">
-                        {companyName?.name}
-                      </p>
-                      <p className=" text-gray-600 text-sm font-normal">
-                        {companyName?.address}
-                      </p>
-                      <p className=" text-gray-600 text-sm font-normal">
-                        {companyName?.mobile}
-                      </p>
-                      <p className=" text-gray-600 text-sm font-normal">
-                        {companyName?.email}
-                      </p>
+                      <input
+                        defaultValue={clientForm.name || selectClient?.name}
+                        onChange={(e) => handleInputChange(e, "name")}
+                        className={isExporting ? "" : defaultInputSmStyle}
+                        placeholder="Client Name"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        className={isExporting ? "" : defaultInputSmStyle}
+                        placeholder="Client Address"
+                        defaultValue={
+                          clientForm.address || selectClient?.billing
+                        }
+                        onChange={(e) => handleInputChange(e, "address")}
+                      />
+                    </div>
+                    <div>
+                      <input
+                        className={isExporting ? "" : defaultInputSmStyle}
+                        placeholder="Client Mobile"
+                        defaultValue={clientForm.mobile || selectClient?.mobile}
+                        onChange={(e) => handleInputChange(e, "mobile")}
+                      />
+                    </div>
+                    <div>
+                      <input
+                        defaultValue={clientForm.email || selectClient?.email}
+                        onChange={(e) => handleInputChange(e, "email")}
+                        className={isExporting ? "" : defaultInputSmStyle}
+                        placeholder="Client Email"
+                      />
                     </div>
                   </div>
-                )
-              : ""}
-            <div className="">
-              <h2 className="text-gray-700 font-semibold text-xl tracking-wide">
-                Invoice
-              </h2>
-            </div>
-          </div>
+                  <div className=" flex gap-3">
+                    <div className="flex flex-col items-center justify-around">
+                      <p className="text-gray-900 font-medium text-base font-sans">
+                        Invoice#
+                      </p>
 
-          {/* <InvoiceClientInfo /> */}
-          <div className="bg-white p-3 rounded-xl ">
-            <div className=" flex items-center gap-3">
-              <h3> Billing To</h3>
-              <button
-                onClick={existClient}
-                className="rounded-xl px-7 text-indigo-500 py-1 border-2 border-solid border-indigo-300 h-8 text-sm flex justify-center items-center gap-2"
-              >
-                <HiUserPlus className="text-blue-600 text-xl" />
-                Existing
-              </button>
-            </div>
-            <div className="flex justify-between md:flex-wrap">
-              <div className="mt-2 w-52 flex flex-col gap-3">
-                <div>
-                  <input
-                    defaultValue={clientForm.name || selectClient?.name}
-                    onChange={(e) => handleInputChange(e, "name")}
-                    className={defaultInputSmStyle}
-                    placeholder="Client Name"
-                  />
-                </div>
-                <div>
-                  <input
-                    className={defaultInputSmStyle}
-                    placeholder="Client Address"
-                    defaultValue={clientForm.address || selectClient?.billing}
-                    onChange={(e) => handleInputChange(e, "address")}
-                  />
-                </div>
-                <div>
-                  <input
-                    className={defaultInputSmStyle}
-                    placeholder="Client Mobile"
-                    defaultValue={clientForm.mobile || selectClient?.mobile}
-                    onChange={(e) => handleInputChange(e, "mobile")}
-                  />
-                </div>
-                <div>
-                  <input
-                    defaultValue={clientForm.email || selectClient?.email}
-                    onChange={(e) => handleInputChange(e, "email")}
-                    className={defaultInputSmStyle}
-                    placeholder="Client Email"
-                  />
-                </div>
-              </div>
-              <div className=" flex gap-3">
-                <div className="flex flex-col items-center justify-around">
-                  <p className="text-gray-900 font-medium text-base font-sans">
-                    Invoice#
-                  </p>
+                      <p className="text-gray-900 font-medium text font-sans">
+                        Creation Date
+                      </p>
+                      <p className="text-gray-900 font-medium text font-sans">
+                        Due Date
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-center justify-around">
+                      <div className="">
+                        <input
+                          className={isExporting ? "" : defaultInputSmStyle}
+                          placeholder="Invoice Number"
+                          value={clientForm.invoiveNumber}
+                          onChange={(e) =>
+                            handleInputChange(e, "invoiveNumber")
+                          }
+                        />
+                      </div>
 
-                  <p className="text-gray-900 font-medium text font-sans">
-                    Creation Date
-                  </p>
-                  <p className="text-gray-900 font-medium text font-sans">
-                    Due Date
-                  </p>
-                </div>
-                <div className="flex flex-col items-center justify-around">
-                  <div className="">
-                    <input
-                      className={defaultInputSmStyle}
-                      placeholder="Invoice Number"
-                      value={clientForm.invoiveNumber}
-                      onChange={(e) => handleInputChange(e, "invoiveNumber")}
-                    />
-                  </div>
-
-                  <div className=" w-full">
-                    <DatePicker
-                      selected={startDate}
-                      onChange={(date) => setStartDate(date)}
-                      className={defaultInputSmStyle}
-                    />
-                  </div>
-                  <div className=" w-full">
-                    <DatePicker
-                      selected={dueDate}
-                      onChange={(date) => setDueDate(date)}
-                      className={defaultInputSmStyle}
-                    />
+                      <div className=" w-full">
+                        <DatePicker
+                          selected={startDate}
+                          onChange={(date) => setStartDate(date)}
+                          className={isExporting ? "" : defaultInputSmStyle}
+                        />
+                      </div>
+                      <div className=" w-full">
+                        <DatePicker
+                          selected={dueDate}
+                          onChange={(date) => setDueDate(date)}
+                          className={isExporting ? "" : defaultInputSmStyle}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+              <AddEmptyProduct />
             </div>
           </div>
-          
         </div>
-        
-        <AddEmptyProduct />
+        {/* <CompoPrint  /> */}
         <InvoiceModal showAdvancesearch />
+        <InvoiceSettingModal />
         <InvoiceButtons handleClick={handleClick} />
         <ExistClientModal />
       </div>

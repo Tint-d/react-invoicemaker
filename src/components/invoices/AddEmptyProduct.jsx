@@ -1,12 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import TableCommon from "../common/table/TableCommon";
 import { AiFillDollarCircle, AiFillPlusCircle } from "react-icons/ai";
 import { useDispatch, useSelector } from "react-redux";
-import { v4 as uuidv4 } from "uuid";
 import {
   addNewProductInvoice,
-  addProduct,
-  removeProduct,
   setExtraFee,
   setExtraFeeRemove,
   setExtraFeeUpdate,
@@ -15,7 +11,6 @@ import {
   setTaxRemove,
   setTaxUpdate,
   setTotal,
-  updateProduct,
 } from "../../redux/invoiceSlice";
 import { BsFillTrashFill } from "react-icons/bs";
 
@@ -28,6 +23,8 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import InvoiceTable from "./InvoiceTable";
 import AddNewInvoiceTable from "./AddNewInvoiceTable";
+import { useDownloadRef } from "../../context/Context";
+import { color } from "framer-motion";
 
 const emptyForm = {
   id: "",
@@ -55,9 +52,11 @@ const AddEmptyProduct = () => {
   const [extra, setExtra] = useState(extraForm);
   const invoiceProducts = useSelector((state) => state.Invoice.data);
   const existProducts = useSelector((state) => state.Invoice.existingProduct);
-
+  const { isExporting, setIsExporting } = useDownloadRef();
   const taxPercentage = useSelector((state) => state.Invoice.tax);
   const extraFees = useSelector((state) => state.Invoice.extraFee);
+  const currentColor = useSelector((state) => state.Invoice.defaultColor);
+  const currentImage = useSelector((state) => state.Invoice.defaultColor);
   const notify = () => {
     toast.error("Already Have Percentage Taxes!", {
       position: toast.POSITION.BOTTOM_CENTER,
@@ -146,40 +145,64 @@ const AddEmptyProduct = () => {
   const taxTable = taxPercentage.map((tax) => {
     return (
       <div
-        className={"flex rounded-xl w-full justify-end  gap-2 p-3 "}
+        className={
+          isExporting
+            ? " flex flex-col sm:flex-row rounded-lg sm:visible w-full  py-2 items-center sm:justify-end"
+            : "flex rounded-xl justify-end  gap-2 p-3 "
+        }
         key={tax.id}
       >
-        <div className=" flex  w-full   sm:w-1/4 text-right sm:pr-8  flex-row sm:block mb-1">
+        <div className="flex  w-full  sm:w-1/4 text-right sm:pr-8  flex-row sm:block mb-1">
           <p
             className={
-              defaultInputSmStyle + " text-right flex justify-end items-center"
+              isExporting
+                ? " flex justify-start items-center  w-full text-gray-900 "
+                : defaultInputSmStyle +
+                  " text-right flex justify-end items-center"
             }
           >
             Tax%
           </p>
         </div>
-        <div className=" flex  w-full sm:w-1/4 text-right sm:pr-8  flex-row sm:block mb-1">
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              className={defaultInputSmStyle + " text-right "}
-              placeholder="Product Name"
-              value={tax.percentage}
-              onChange={(e) => handleInputChange(e, "percentage")}
-            />
-            <p>%</p>
+
+        {isExporting ? (
+          ""
+        ) : (
+          <div className=" flex  w-full sm:w-1/4 text-right sm:pr-8  flex-row sm:block mb-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                className={
+                  isExporting
+                    ? " text-right"
+                    : defaultInputSmStyle + " text-right "
+                }
+                placeholder="Product Name"
+                value={tax.percentage}
+                onChange={(e) => handleInputChange(e, "percentage")}
+              />
+              <p>%</p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex  w-full sm:w-1/4 text-right sm:pr-8  flex-row sm:block mb-1">
-          <div className=" w-full  flex justify-end">
+          <div className="w-full flex justify-end">
             <div
-              className="flex items-center justify-end gap-2 text-xl "
+              className={
+                isExporting
+                  ? " text-gray-900"
+                  : "flex items-center justify-end gap-2 text-xl "
+              }
               onClick={() => removeTax(tax.id)}
             >
-              <span className=" text-base">{calculateTax}</span>
-              <button className="bg-red-200 p-2 w-8 h-8 flex items-center justify-center rounded-full">
-                <BsFillTrashFill className="text-red-500 text-xl" />
-              </button>
+              <span className="text-base">{calculateTax}</span>
+              {isExporting ? (
+                ""
+              ) : (
+                <button className="bg-red-200 p-2 w-8 h-8 flex items-center justify-center rounded-full">
+                  <BsFillTrashFill className="text-red-500 text-xl" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -190,40 +213,59 @@ const AddEmptyProduct = () => {
   const extraFeeTable = extraFees.map((fee) => {
     return (
       <div
-        className={"flex rounded-xl w-full justify-end  gap-2 p-3 "}
+        className={
+          isExporting
+            ? "flex flex-col sm:flex-row rounded-lg sm:visible w-full  py-2 items-center sm:justify-end"
+            : "flex rounded-xl w-full justify-end  gap-2 p-3 "
+        }
         key={fee.id}
       >
         <div className=" flex  w-full   sm:w-1/4 text-right sm:pr-8  flex-row sm:block mb-1">
-          <input
-            placeholder="Fee Title"
-            className={
-              defaultInputSmStyle + " text-right flex justify-end items-center"
-            }
-            value={fee.title}
-            onChange={(e) => extraFeeInputChange(e, "title", fee.id)}
-          />
-        </div>
-        <div className=" flex  w-full sm:w-1/4 text-right sm:pr-8  flex-row sm:block mb-1">
-          <div className="flex items-center gap-2">
+          {isExporting ? (
+            <p className="flex justify-start items-center  w-full text-gray-900 ">
+              {fee.title}
+            </p>
+          ) : (
             <input
-              type="number"
-              className={defaultInputSmStyle + " text-right "}
-              placeholder="Product Name"
-              value={fee.fee}
-              onChange={(e) => extraFeeInputChange(e, "fee", fee.id)}
+              placeholder="Fee Title"
+              className={
+                defaultInputSmStyle +
+                " text-right flex justify-end items-center"
+              }
+              value={fee.title}
+              onChange={(e) => extraFeeInputChange(e, "title", fee.id)}
             />
-          </div>
+          )}
         </div>
-        <div className="flex  w-full sm:w-1/4 text-right sm:pr-8  flex-row sm:block mb-1">
+        {isExporting ? (
+          ""
+        ) : (
+          <div className=" flex  w-full sm:w-1/4 text-right sm:pr-8  flex-row sm:block mb-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                className={defaultInputSmStyle + " text-right "}
+                placeholder="Product Name"
+                value={fee.fee}
+                onChange={(e) => extraFeeInputChange(e, "fee", fee.id)}
+              />
+            </div>
+          </div>
+        )}
+        <div className="flex  w-full sm:w-1/4 text-right sm:pr-8   flex-row sm:block mb-1">
           <div className=" w-full  flex justify-end">
             <div
               className="flex items-center justify-end gap-2 text-xl "
               onClick={() => removeFee(fee.id)}
             >
-              <span className=" text-base">{fee.fee}</span>
-              <button className="bg-red-200 p-2 w-8 h-8 flex items-center justify-center rounded-full">
-                <BsFillTrashFill className="text-red-500 text-xl" />
-              </button>
+              <span className="text-base">{fee.fee}</span>
+              {isExporting ? (
+                ""
+              ) : (
+                <button className="bg-red-200 p-2 w-8 h-8 flex items-center justify-center rounded-full">
+                  <BsFillTrashFill className="text-red-500 text-xl" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -233,7 +275,10 @@ const AddEmptyProduct = () => {
 
   return (
     <div className="mt-5 bg-white p-3 rounded-md">
-      <div className=" w-full bg-indigo-700 flex items-center justify-between px-4 h-12 text-white rounded-xl">
+      <div
+        style={{ backgroundColor: currentColor }}
+        className=" w-full bg-indigo-700 flex items-center justify-between px-4 h-12 text-white rounded-xl"
+      >
         <h1>Description</h1>
         <h1>Price</h1>
         <h1>Qty</h1>
@@ -243,50 +288,62 @@ const AddEmptyProduct = () => {
       {/* <InvoiceTable /> */}
       <AddNewInvoiceTable />
       {/*product btn */}
-      <div className="flex flex-col sm:flex-row rounded-lg sm:visible w-full px-4 py-2 items-center sm:justify-end">
-        <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
-          <Button size="sm" block={1} onClick={AddEmptyProduct}>
-            <AiFillPlusCircle style={IconStyle} className="h-4 w-4" />
-            Add Empty Product
-          </Button>
+      {isExporting ? (
+        ""
+      ) : (
+        <div className="flex flex-col sm:flex-row rounded-lg sm:visible w-full px-4 py-2 items-center sm:justify-end">
+          <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
+            <Button size="sm" block={1} onClick={AddEmptyProduct}>
+              <AiFillPlusCircle style={IconStyle} className="h-4 w-4" />
+              Add Empty Product
+            </Button>
+          </div>
+          <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
+            <Button size="sm" block={1} onClick={AddExistProduct}>
+              <BsFillTrashFill style={IconStyle} className="w-4 h-4" />
+              Add Exisiting Product
+            </Button>
+          </div>
         </div>
-        <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
-          <Button size="sm" block={1} onClick={AddExistProduct}>
-            <BsFillTrashFill style={IconStyle} className="w-4 h-4" />
-            Add Exisiting Product
-          </Button>
-        </div>
-      </div>
+      )}
       {/* subtotal */}
-      <div className="flex flex-col sm:flex-row rounded-lg sm:visible w-full px-4 py-2 items-center sm:justify-end">
-        <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
-          <h2 className="flex tracking-wide font-medium text-gray-500 text-lg ">
+
+      <div className="flex flex-col sm:flex-row rounded-lg sm:visible w-full py-2 items-center sm:justify-end">
+        <div className=" w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
+          <h2 className="flex tracking-wide font-medium text-gray-900 text-lg ">
             Subtotal
           </h2>
         </div>
-        <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
+        <div className=" w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
           <h2 className="">{subTotal.toFixed(2)}</h2>
         </div>
       </div>
       {/* tax fee */}
       {taxTable}
       {extraFeeTable}
-      <div className="flex flex-col sm:flex-row rounded-lg sm:visible w-full px-4 py-2 items-center sm:justify-end">
-        <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
-          <Button size="sm" block={1} onClick={TaxProduct}>
-            <TbReceiptTax style={IconStyle} className="h-4 w-4" />
-            Add Tax
-          </Button>
+      {isExporting ? (
+        ""
+      ) : (
+        <div className="flex flex-col sm:flex-row rounded-lg sm:visible w-full px-4 py-2 items-center sm:justify-end">
+          <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
+            <Button size="sm" block={1} onClick={TaxProduct}>
+              <TbReceiptTax style={IconStyle} className="h-4 w-4" />
+              Add Tax
+            </Button>
+          </div>
+          <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
+            <Button size="sm" block={1} onClick={AddExtraFee}>
+              <AiFillDollarCircle style={IconStyle} className="w-4 h-4" />
+              Add Extra Fees
+            </Button>
+          </div>
         </div>
-        <div className="font-title w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
-          <Button size="sm" block={1} onClick={AddExtraFee}>
-            <AiFillDollarCircle style={IconStyle} className="w-4 h-4" />
-            Add Extra Fees
-          </Button>
-        </div>
-      </div>
+      )}
       <div className="flex flex-col sm:flex-row rounded-lg sm:visible w-full px-4 py-2 items-center sm:justify-end ">
-        <div className=" bg-indigo-700 rounded-lg w-[50%] flex justify-between items-center h-12">
+        <div
+          style={{ backgroundColor: currentColor }}
+          className="  rounded-lg w-[50%] flex justify-between items-center h-12"
+        >
           <div className=" w-full sm:w-1/4 text-right sm:pr-8 flex flex-row sm:block mb-1">
             <h2 className=" text-white">Total</h2>
           </div>

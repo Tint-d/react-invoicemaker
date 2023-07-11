@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import ImageUploader from "../common/ImageUploader";
 import { motion } from "framer-motion";
@@ -19,6 +19,13 @@ const emptyForm = {
 
 const ProductEditModal = () => {
   const editedID = useSelector((state) => state.Product.editedID);
+  const [isTouched, setIsTouched] = useState(false);
+  const allProduct = useSelector((state) => state.Product.data);
+  const [validForm, setValidForm] = useState(
+    Object.keys(emptyForm).reduce((a, b) => {
+      return { ...a, [b]: false };
+    }, {})
+  );
   const [productForm, setProductForm] = useState(emptyForm);
   const dispatch = useDispatch();
 
@@ -29,8 +36,6 @@ const ProductEditModal = () => {
       setProductForm((prev) => {
         return { ...prev, [keyName]: value };
       });
-
-      // dispatch(updateNewProductFormField({ key: keyName, value }));
     },
     [dispatch]
   );
@@ -64,6 +69,25 @@ const ProductEditModal = () => {
     dispatch(onConfirmEditProduct(productForm));
     setProductForm("");
   };
+
+  useEffect(() => {
+    setValidForm((prev) => ({
+      id: true,
+      image: true,
+      name: productForm?.name?.trim() ? true : false,
+      billingAddress: productForm?.billing?.trim() ? true : false,
+      mobileNo: productForm?.mobile?.trim() ? true : false,
+    }));
+  }, [productForm]);
+
+  useEffect(() => {
+    if (editedID !== null) {
+      const isFindIndex = allProduct.findIndex((pd) => pd.id === editedID);
+      if (isFindIndex !== -1) {
+        setProductForm({ ...allProduct[isFindIndex] });
+      }
+    }
+  }, [allProduct, editedID]);
 
   return editedID !== null ? (
     <div>

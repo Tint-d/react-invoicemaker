@@ -10,10 +10,8 @@ const Client = () => {
   return (
     <div>
       <Layout>
-        <h3 className=" px- text-2xl text-gray-900 tracking-wide font-semibold">
-          Clients
-        </h3>
-        <div className=" flex justify-between gap-5">
+        
+        <div className=" lg:flex lg:flex-row lg:justify-between md:gap-5 sm:flex sm:flex-col sm:gap-4">
           <div className=" flex-1">
             <ClientTable showAdvanceSearch />
           </div>

@@ -7,6 +7,7 @@ import {
   removeExistingProduct,
   setExistingUpdateProduct,
 } from "../../redux/invoiceSlice";
+import { useDownloadRef } from "../../context/Context";
 
 const AddExistingProduct = () => {
   const selectID = useSelector((state) => state.Invoice.selectModalID);
@@ -14,7 +15,7 @@ const AddExistingProduct = () => {
   const [productForm, setProductForms] = useState(existProducts);
   const allProducts = useSelector(getAllProductSelector);
   const dispatch = useDispatch();
-
+  const { isExporting } = useDownloadRef();
   const handleInputChange = useCallback(
     (event, productId, field) => {
       const value = event.target.value;
@@ -44,7 +45,11 @@ const AddExistingProduct = () => {
             <div className=" flex bg-white w-full">
               <input
                 type="text"
-                className={defaultInputSmStyle + " text-right"}
+                className={
+                  isExporting
+                    ? "text-left"
+                    : defaultInputSmStyle + " text-right"
+                }
                 placeholder="Product Name"
                 value={product.name}
                 onChange={(e) => handleInputChange(e, product.id, "name")}
@@ -56,7 +61,11 @@ const AddExistingProduct = () => {
                 type="number"
                 value={product.price}
                 onChange={(e) => handleInputChange(e, product.id, "price")}
-                className={defaultInputSmStyle + " text-right"}
+                className={
+                  isExporting
+                    ? "text-right"
+                    : defaultInputSmStyle + " text-right"
+                }
               />
             </div>
 
@@ -65,7 +74,11 @@ const AddExistingProduct = () => {
                 type="number"
                 value={product.amount}
                 onChange={(e) => handleInputChange(e, product.id, "amount")}
-                className={defaultInputSmStyle + " text-right"}
+                className={
+                  isExporting
+                    ? "text-right"
+                    : defaultInputSmStyle + " text-right"
+                }
               />
             </div>
 
@@ -77,9 +90,13 @@ const AddExistingProduct = () => {
                 <span className=" text-base">
                   {product.price * product.amount}
                 </span>
-                <button className="bg-red-200 p-2 w-8 h-8 flex items-center justify-center rounded-full">
-                  <BsFillTrashFill className="text-red-500 text-xl" />
-                </button>
+                {isExporting ? (
+                  ""
+                ) : (
+                  <button className="bg-red-200 p-2 w-8 h-8 flex items-center justify-center rounded-full">
+                    <BsFillTrashFill className="text-red-500 text-xl" />
+                  </button>
+                )}
               </div>
             </div>
           </div>

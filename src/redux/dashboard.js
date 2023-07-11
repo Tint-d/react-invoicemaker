@@ -10,7 +10,7 @@ export const dashboard = createSlice({
   initialState,
   reducers: {
     setCurrentTab: (state, { payload }) => {
-      state.currentTab = !state.currentTab;
+      state.currentTab = payload;
     },
     addCompany: (state, { payload }) => {
       console.log(payload);

@@ -1,7 +1,7 @@
 import { createSlice, nanoid } from "@reduxjs/toolkit";
+import { colorData } from "../shared/colorData";
 
 const initialState = {
-  products: [],
   product: [],
   existingProduct: [],
   data: [],
@@ -14,9 +14,10 @@ const initialState = {
     price: 0,
   },
   totalPrice: 0,
-
+  color: colorData,
+  defaultColor: colorData[0],
+  settingToggle: false,
   selectModalID: null,
-  deletedID: null,
   modalToggle: false,
   tax: [],
   extraFee: [],
@@ -44,9 +45,6 @@ export const invoiceSlice = createSlice({
   name: "invoice",
   initialState,
   reducers: {
-    addProduct: (state, action) => {
-      state.products.push(action.payload);
-    },
     removeProduct: (state, action) => {
       state.data = state.data.filter((item) => item.id !== action.payload);
     },
@@ -159,11 +157,16 @@ export const invoiceSlice = createSlice({
     setTotal: (state, { payload }) => {
       state.total = payload;
     },
+    setColor: (state, { payload }) => {
+      state.defaultColor = payload;
+    },
+    setSettingModal: (state, { payload }) => {
+      state.settingToggle = payload;
+    },
   },
 });
 
 export const {
-  addProduct,
   removeProduct,
   updateProduct,
   addNewProductInvoice,
@@ -182,6 +185,8 @@ export const {
   setClientInfo,
   setClientInfoRemove,
   setTotal,
+  setColor,
+  setSettingModal,
 } = invoiceSlice.actions;
 
 export default invoiceSlice.reducer;

@@ -4,7 +4,6 @@ import clientAnimation from "../../lottie/client.json";
 import invoiceAnimation from "../../lottie/invoice.json";
 import totalAnimation from "../../lottie/total.json";
 import productAnimation from "../../lottie/product.json";
-import TableCommon from "../common/table/TableCommon";
 import { useSelector } from "react-redux";
 import { getAllProductSelector } from "../../redux/productSlice";
 import InvoiceTable from "../invoices/InvoiceTable";
@@ -14,7 +13,7 @@ const DashboardCard = () => {
   const allInvoice = useSelector((state) => state.Invoice.clientInfo);
   const allProducts = useSelector(getAllProductSelector);
   const allClient = useSelector((state) => state.Client.data);
-
+  const color = useSelector((state) => state.Invoice.defaultColor);
   const Total = allInvoice.reduce(
     (initial, current) => initial + current.total,
     0
@@ -24,6 +23,7 @@ const DashboardCard = () => {
   return (
     <div className="flex-1  flex flex-wrap w-full gap-5">
       {/* card lottie */}
+     
       <div className="  w-[48%]  bg-white p-5 flex rounded-lg items-center justify-between">
         <div>
           <h6 className="text-gray-600 text-lg">Total Balance</h6>
@@ -53,8 +53,10 @@ const DashboardCard = () => {
         <p className="text-gray-600 text-2xl">{allClient.length}</p>
       </div>
       {/* card lottie */}
-     <InvoiceTable advance="false"/>
-     <ClientTable advance="false"/>
+
+    
+      <InvoiceTable advance="false" />
+      <ClientTable advance="false" />
     </div>
   );
 };

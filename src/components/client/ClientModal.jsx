@@ -1,16 +1,21 @@
 import { nanoid } from "@reduxjs/toolkit";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import ImageUploader from "../common/ImageUploader";
 import { useState } from "react";
 import {
+  defaultInputInvalidStyle,
+  defaultInputLargeInvalidStyle,
   defaultInputLargeStyle,
   defaultInputStyle,
 } from "../constants/defaultStyle";
-import client, { onConfirmEditClient, setClientEditId } from "../../redux/client";
+import client, {
+  onConfirmEditClient,
+  setClientEditId,
+} from "../../redux/client";
 
 const emptyForm = {
-  id: nanoid(),
+  id: "",
   image: "",
   name: "",
   mobile: "",
@@ -18,42 +23,42 @@ const emptyForm = {
   billing: "",
 };
 
+const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/;
+
 const ClientModal = () => {
   const editedID = useSelector((state) => state.Client.editedID);
   const allClient = useSelector((state) => state.Client.data);
-  // console.log(allClient);
-  // console.log(editedID);
-  const [productForm, setProductForm] = useState(emptyForm);
+  const [animate, setAnimate] = useState(true);
+  const [clientForm, setClientForm] = useState(emptyForm);
+  const [isTouched, setIsTouched] = useState(false);
+  const [validForm, setValidForm] = useState(
+    Object.keys(emptyForm).reduce((a, b) => {
+      return { ...a, [b]: false };
+    }, {})
+  );
   const dispatch = useDispatch();
 
-  const item = allClient.find((client) => client.id === editedID);
+  const handlerClientValue = useCallback((event, keyName) => {
+    const value = event.target.value;
 
-  const handlerProductValue = useCallback(
-    (event, keyName) => {
-      const value = event.target.value;
-
-      setProductForm((prev) => {
-        return { ...prev, [keyName]: value };
-      });
-
-      // dispatch(updateNewProductFormField({ key: keyName, value }));
-    },
-    [dispatch]
-  );
+    setClientForm((prev) => {
+      return { ...prev, [keyName]: value };
+    });
+  }, []);
 
   const imageUploadClasses = useMemo(() => {
     const defaultStyle = "rounded-xl ";
 
-    if (productForm.image) {
+    if (clientForm.image) {
       return defaultStyle + " ";
     }
 
-    if (!productForm.image) {
+    if (!clientForm.image) {
       return defaultStyle + " border-dashed border-2 border-indigo-400 ";
     }
 
     return defaultStyle;
-  }, [productForm]);
+  }, [clientForm]);
 
   const onChangeImage = useCallback((str) => {
     setProductForm((prev) => ({
@@ -67,9 +72,37 @@ const ClientModal = () => {
   };
 
   const onEditHandler = () => {
-    dispatch(onConfirmEditClient(productForm));
-    setProductForm("");
+    dispatch(onConfirmEditClient(clientForm));
+    setClientForm("");
   };
+
+  useEffect(() => {
+    const isValidEmail =
+      clientForm?.email?.trim() && clientForm?.email.match(emailRegex);
+
+    setValidForm((prev) => ({
+      id: true,
+      image: true,
+      name: clientForm?.name?.trim() ? true : false,
+      email: isValidEmail ? true : false,
+      billingAddress: clientForm?.billing?.trim() ? true : false,
+      mobileNo: clientForm?.mobile?.trim() ? true : false,
+    }));
+  }, [clientForm]);
+
+  useEffect(() => {
+    if (editedID !== null) {
+      setAnimate(true);
+      const isFindIndex = allClient.findIndex(
+        (client) => client.id === editedID
+      );
+      if (isFindIndex !== -1) {
+        setClientForm({ ...allClient[isFindIndex] });
+      }
+    } else {
+      setAnimate(false);
+    }
+  }, [allClient, editedID]);
 
   return editedID !== null ? (
     <div>
@@ -95,7 +128,7 @@ const ClientModal = () => {
                           <ImageUploader
                             keyName="QuickEditImageUpload"
                             className={imageUploadClasses}
-                            url={productForm.image || item.image}
+                            url={clientForm.image}
                             onChangeImage={onChangeImage}
                           />
 
@@ -104,9 +137,13 @@ const ClientModal = () => {
                               <input
                                 autoComplete="nope"
                                 placeholder="User Name"
-                                className={defaultInputLargeStyle}
-                                defaultValue={item.name || productForm.name}
-                                onChange={(e) => handlerProductValue(e, "name")}
+                                className={
+                                  !validForm.name && isTouched
+                                    ? defaultInputLargeInvalidStyle
+                                    : defaultInputLargeStyle
+                                }
+                                value={clientForm.name}
+                                onChange={(e) => handlerClientValue(e, "name")}
                               />
                             </div>
                           </div>
@@ -121,11 +158,13 @@ const ClientModal = () => {
                                 autoComplete="nope"
                                 placeholder="User Email"
                                 type="text"
-                                className={defaultInputStyle}
-                                defaultValue={item.email || productForm.email}
-                                onChange={(e) =>
-                                  handlerProductValue(e, "email")
+                                className={
+                                  !validForm.email && isTouched
+                                    ? defaultInputInvalidStyle
+                                    : defaultInputStyle
                                 }
+                                value={clientForm.email}
+                                onChange={(e) => handlerClientValue(e, "email")}
                               />
                             </div>
                           </div>
@@ -140,10 +179,14 @@ const ClientModal = () => {
                                 autoComplete="nope"
                                 placeholder="Phone Number"
                                 type="text"
-                                className={defaultInputStyle}
-                                defaultValue={item.mobile || productForm.mobile}
+                                className={
+                                  !validForm.mobile && isTouched
+                                    ? defaultInputInvalidStyle
+                                    : defaultInputStyle
+                                }
+                                value={clientForm.mobile}
                                 onChange={(e) =>
-                                  handlerProductValue(e, "mobile")
+                                  handlerClientValue(e, "mobile")
                                 }
                               />
                             </div>
@@ -159,12 +202,14 @@ const ClientModal = () => {
                                 autoComplete="nope"
                                 placeholder="Billing"
                                 type="text"
-                                className={defaultInputStyle}
-                                defaultValue={
-                                  item.billing || productForm.billing
+                                className={
+                                  !validForm.billing && isTouched
+                                    ? defaultInputInvalidStyle
+                                    : defaultInputStyle
                                 }
+                                value={clientForm.billing}
                                 onChange={(e) =>
-                                  handlerProductValue(e, "billing")
+                                  handlerClientValue(e, "billing")
                                 }
                               />
                             </div>
